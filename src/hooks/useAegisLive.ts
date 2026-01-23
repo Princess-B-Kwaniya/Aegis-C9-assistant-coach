@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { PlayerData, GameState, Anomaly } from '../types';
-import { generateRandomAnomaly } from '../utils/simulation';
+import { PlayerData, GameState, Anomaly } from '@/types';
+import { generateRandomAnomaly } from '@/utils/simulation';
 
 export const useAegisLive = () => {
   const [game, setGame] = useState<GameState>({ winProbability: 52, tempo: 65, anomalies: [] });

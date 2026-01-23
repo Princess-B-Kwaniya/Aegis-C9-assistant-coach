@@ -1,4 +1,4 @@
-import { Anomaly, PlayerData } from '../types';
+import { Anomaly, PlayerData } from '@/types';
 
 export const generateRandomAnomaly = (players: PlayerData[]): Anomaly => {
   const anomalies = [

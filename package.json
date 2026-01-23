@@ -1,26 +1,29 @@
 {
-  "name": "Aegis-C9-Frontend",
+  "name": "aegis-c9",
+  "version": "0.1.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "npm run dev --prefix aegis-c9",
-    "build": "npm run build --prefix aegis-c9",
-    "start": "npm run start --prefix aegis-c9",
-    "lint": "npm run lint --prefix aegis-c9"
-  },
-  "devDependencies": {
-    "@types/react": "^19.2.9",
-    "@types/react-dom": "^19.2.3",
-    "prettier": "^3.3.1",
-    "vite": "^7.3.1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "biome check",
+    "format": "biome format --write"
   },
   "dependencies": {
     "lucide-react": "^0.562.0",
-    "recharts": "^3.7.0",
-    "next": "^14.0.0"
+    "next": "16.1.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "recharts": "^3.7.0"
   },
-  "overrides": {
-    "esbuild": "^0.24.2"
+  "devDependencies": {
+    "@biomejs/biome": "2.2.0",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "babel-plugin-react-compiler": "1.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }
