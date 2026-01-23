@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/webstorm-icon-logo.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WS playground</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="logo">
+  <a href="https://www.jetbrains.com/webstorm/">
+    <img src="/webstorm-logo.svg" alt="WebStorm logo" width="344"
+         height="90">
+  </a>
+</header>
+<main id="app">
+  <h1 class="title">
+    Aegis-C9 Assistant Coach <br /> 
+    <span style="font-size: 0.5em; color: #666;">Counter Playground (legacy)</span>
+  </h1>
+  <section class="counter">
+    <div class="counter-info">
+      <p class="counter-text">Counter is</p>
+      <p class="counter-value" id="counter-value"></p>
+    </div>
+    <div class="counter-interaction">
+      <button id="increaseByOne" type="button">+1</button>
+      <button id="increaseByTwo" type="button">+2</button>
+      <button id="decreaseByOne" type="button">-1</button>
+      <button id="decreaseByTwo" type="button">-2</button>
+    </div>
+  </section>
+  <section style="margin-top: 40px; text-align: center;">
+    <a href="http://localhost:3000" target="_blank" style="display: inline-block; padding: 15px 30px; background-color: #a3e635; color: black; border-radius: 12px; font-weight: 900; text-decoration: none; font-family: sans-serif; box-shadow: 0 0 20px rgba(163, 230, 53, 0.4); text-transform: uppercase; letter-spacing: 0.1em; transition: all 0.3s ease;">
+      LAUNCH AEGIS-C9 COMMAND CENTER
+    </a>
+    <p style="margin-top: 10px; font-size: 0.8em; color: #a3e635;">(Systems Online • Port 3000)</p>
+  </section>
+</main>
+<footer class="technologies">
+  <img src="/technologies.svg" alt="List of supported technologies">
+</footer>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
