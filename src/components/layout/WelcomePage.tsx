@@ -1,15 +1,119 @@
-import React, { useState, useEffect } from 'react';
-import { Shield, Zap, Target, Users, ArrowRight, Activity, AlertCircle, Sword } from 'lucide-react';
+'use client';
+import React, { useState, useEffect, useRef } from 'react';
+import { Shield, Zap, Target, Users, ArrowRight, Activity, AlertCircle, Sword, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { searchTeams, isValidTeam, valorantTeams, lolTeams } from '@/data/teams';
 
 interface WelcomePageProps {
   onStart: (teamName: string, opponentName: string, game: string) => void;
 }
+
+interface AutocompleteInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  suggestions: string[];
+  icon: React.ReactNode;
+  iconActiveColor: string;
+  label: string;
+}
+
+const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
+  value,
+  onChange,
+  placeholder,
+  suggestions,
+  icon,
+  iconActiveColor,
+  label
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (value.length > 0) {
+      const filtered = suggestions.filter(s => 
+        s.toLowerCase().includes(value.toLowerCase())
+      ).slice(0, 8);
+      setFilteredSuggestions(filtered);
+      setIsOpen(filtered.length > 0);
+    } else {
+      setFilteredSuggestions([]);
+      setIsOpen(false);
+    }
+  }, [value, suggestions]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (team: string) => {
+    onChange(team);
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="space-y-2" ref={wrapperRef}>
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">{label}</label>
+      <div className="relative group">
+        <div className={`absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:${iconActiveColor} transition-colors`}>
+          {icon}
+        </div>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={() => value.length > 0 && filteredSuggestions.length > 0 && setIsOpen(true)}
+          placeholder={placeholder}
+          className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-5 pl-14 pr-12 text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-cloud9-blue/30 focus:bg-white transition-all uppercase tracking-widest shadow-inner"
+        />
+        {value && (
+          <button
+            onClick={() => onChange('')}
+            className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
+          >
+            <X size={16} />
+          </button>
+        )}
+        
+        {/* Dropdown */}
+        {isOpen && filteredSuggestions.length > 0 && (
+          <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+            <div className="max-h-64 overflow-y-auto">
+              {filteredSuggestions.map((team, index) => (
+                <button
+                  key={team}
+                  onClick={() => handleSelect(team)}
+                  className={`w-full text-left px-5 py-3 text-sm font-bold uppercase tracking-wider hover:bg-blue-50 hover:text-cloud9-blue transition-colors ${
+                    index !== filteredSuggestions.length - 1 ? 'border-b border-slate-100' : ''
+                  }`}
+                >
+                  {team}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
   const [teamName, setTeamName] = useState('');
   const [opponentName, setOpponentName] = useState('');
   const [selectedGame, setSelectedGame] = useState('League of Legends');
   const [bgImage, setBgImage] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const router = useRouter();
 
   const games = [
     { 
@@ -30,6 +134,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
     }
   ];
 
+  const currentTeamList = selectedGame === 'VALORANT' ? valorantTeams : lolTeams;
+
   useEffect(() => {
     const interval = setInterval(() => {
       setBgImage((prev) => (prev + 1) % games.length);
@@ -37,8 +143,86 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Clear inputs when game changes
+  useEffect(() => {
+    setTeamName('');
+    setOpponentName('');
+  }, [selectedGame]);
+
+  const handleStart = () => {
+    const isValGame = selectedGame === 'VALORANT';
+    const gameType = isValGame ? 'valorant' : 'lol';
+    
+    // Validate team name
+    if (!teamName.trim()) {
+      setAlertMessage('Please enter your team name.');
+      setShowAlert(true);
+      return;
+    }
+    
+    if (!isValidTeam(teamName, gameType)) {
+      setAlertMessage(`"${teamName}" is not found in our ${selectedGame} team database. Please select a valid team from the suggestions.`);
+      setShowAlert(true);
+      return;
+    }
+    
+    // Validate opponent name
+    if (!opponentName.trim()) {
+      setAlertMessage('Please enter the opponent team name.');
+      setShowAlert(true);
+      return;
+    }
+    
+    if (!isValidTeam(opponentName, gameType)) {
+      setAlertMessage(`"${opponentName}" is not found in our ${selectedGame} team database. Please select a valid team from the suggestions.`);
+      setShowAlert(true);
+      return;
+    }
+    
+    // Check if same team
+    if (teamName.toLowerCase() === opponentName.toLowerCase()) {
+      setAlertMessage('Your team and opponent team cannot be the same.');
+      setShowAlert(true);
+      return;
+    }
+    
+    if (isValGame) {
+      // Store in localStorage for the Valorant page
+      localStorage.setItem('valorantTeam', teamName);
+      localStorage.setItem('valorantOpponent', opponentName);
+      // Navigate to Valorant dashboard
+      router.push(`/valorant?team=${encodeURIComponent(teamName)}&opponent=${encodeURIComponent(opponentName)}`);
+    } else {
+      // Use the existing onStart for League of Legends
+      onStart(teamName, opponentName, selectedGame);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden text-slate-900">
+      {/* Alert Modal */}
+      {showAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-8 max-w-md mx-4 shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center shrink-0">
+                <AlertCircle size={24} className="text-rose-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-black text-lg uppercase tracking-tight text-slate-900 mb-2">Team Not Found</h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{alertMessage}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowAlert(false)}
+              className="w-full mt-6 bg-cloud9-blue text-white py-4 rounded-2xl font-black uppercase tracking-wider text-sm hover:bg-[#009ed9] transition-colors"
+            >
+              Got It
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Background */}
       {games.map((game, index) => (
         <div 
@@ -74,7 +258,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
           {/* Ticker */}
           <div className="mt-6 overflow-hidden bg-cloud9-blue/5 border-y border-cloud9-blue/10 py-2">
             <div className="animate-marquee whitespace-nowrap text-[10px] font-black uppercase tracking-widest text-cloud9-blue">
-              LIVE SESSION CALIBRATION PENDING • AWAITING TEAM IDENTIFICATION • MIE ENGINE STATUS: READY • GRID DATA UPLINK: STANDBY • CLOUD9 VS TSM - HISTORICAL DATA LOADED • 
+              LIVE SESSION CALIBRATION PENDING • AWAITING TEAM IDENTIFICATION • MIE ENGINE STATUS: READY • GRID DATA UPLINK: STANDBY • SELECT YOUR TEAM TO BEGIN • 
             </div>
           </div>
         </div>
@@ -103,51 +287,89 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
               </div>
             </div>
 
-            {/* Inputs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Friendly Identification</label>
-                <div className="relative group">
-                  <Shield className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-cloud9-blue transition-colors" size={20} />
-                  <input
-                    type="text"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
-                    placeholder="ENTER YOUR TEAM NAME"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-cloud9-blue/30 focus:bg-white transition-all uppercase tracking-widest shadow-inner"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Hostile Identification</label>
-                <div className="relative group">
-                  <Sword className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-500 transition-colors" size={20} />
-                  <input
-                    type="text"
-                    value={opponentName}
-                    onChange={(e) => setOpponentName(e.target.value)}
-                    placeholder="ENTER OPPONENT NAME"
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-5 pl-14 pr-6 text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-rose-500/30 focus:bg-white transition-all uppercase tracking-widest shadow-inner"
-                  />
-                </div>
-              </div>
+            {/* Team count info */}
+            <div className="text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                {currentTeamList.length} Teams Available for {selectedGame}
+              </p>
             </div>
+
+            {/* Inputs with Autocomplete */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <AutocompleteInput
+                value={teamName}
+                onChange={setTeamName}
+                placeholder="SEARCH YOUR TEAM"
+                suggestions={currentTeamList}
+                icon={<Shield size={20} />}
+                iconActiveColor="text-cloud9-blue"
+                label="Friendly Identification"
+              />
+              <AutocompleteInput
+                value={opponentName}
+                onChange={setOpponentName}
+                placeholder="SEARCH OPPONENT"
+                suggestions={currentTeamList}
+                icon={<Sword size={20} />}
+                iconActiveColor="text-rose-500"
+                label="Hostile Identification"
+              />
+            </div>
+
+            {/* Team Preview */}
+            {(teamName || opponentName) && (
+              <div className="flex items-center justify-center gap-6">
+                <div className={`px-6 py-3 rounded-xl ${isValidTeam(teamName, selectedGame === 'VALORANT' ? 'valorant' : 'lol') ? 'bg-blue-50 border border-blue-200' : 'bg-slate-50 border border-slate-200'}`}>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Your Team</p>
+                  <p className={`text-sm font-black uppercase tracking-wide ${isValidTeam(teamName, selectedGame === 'VALORANT' ? 'valorant' : 'lol') ? 'text-cloud9-blue' : 'text-slate-400'}`}>
+                    {teamName || '---'}
+                    {teamName && !isValidTeam(teamName, selectedGame === 'VALORANT' ? 'valorant' : 'lol') && (
+                      <span className="text-rose-500 text-[9px] block">Not found</span>
+                    )}
+                  </p>
+                </div>
+                <div className="text-2xl font-black text-slate-300">VS</div>
+                <div className={`px-6 py-3 rounded-xl ${isValidTeam(opponentName, selectedGame === 'VALORANT' ? 'valorant' : 'lol') ? 'bg-rose-50 border border-rose-200' : 'bg-slate-50 border border-slate-200'}`}>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Opponent</p>
+                  <p className={`text-sm font-black uppercase tracking-wide ${isValidTeam(opponentName, selectedGame === 'VALORANT' ? 'valorant' : 'lol') ? 'text-rose-600' : 'text-slate-400'}`}>
+                    {opponentName || '---'}
+                    {opponentName && !isValidTeam(opponentName, selectedGame === 'VALORANT' ? 'valorant' : 'lol') && (
+                      <span className="text-rose-500 text-[9px] block">Not found</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* CTA */}
             <div className="flex flex-col items-center">
               <button
-                onClick={() => onStart(teamName || 'CLOU9', opponentName || 'OPPONENT', selectedGame)}
-                className="group relative w-full max-w-md bg-cloud9-blue text-white py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 hover:bg-[#009ed9] transition-all duration-300 shadow-[0_20px_40px_-10px_rgba(0,174,239,0.4)] overflow-hidden"
+                onClick={handleStart}
+                disabled={!teamName || !opponentName}
+                className={`group relative w-full max-w-md py-6 rounded-2xl font-black uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 transition-all duration-300 overflow-hidden ${
+                  teamName && opponentName
+                    ? 'bg-cloud9-blue text-white hover:bg-[#009ed9] shadow-[0_20px_40px_-10px_rgba(0,174,239,0.4)]'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
               >
-                <div className="absolute inset-0 w-1/2 h-full bg-white/20 skew-x-[-30deg] -translate-x-[200%] group-hover:translate-x-[300%] transition-transform duration-1000" />
-                GET STARTED
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                <div className={`absolute inset-0 w-1/2 h-full bg-white/20 skew-x-[-30deg] -translate-x-[200%] ${teamName && opponentName ? 'group-hover:translate-x-[300%]' : ''} transition-transform duration-1000`} />
+                {teamName && opponentName ? 'ENTER COMMAND CENTER' : 'SELECT BOTH TEAMS'}
+                <ArrowRight size={18} className={teamName && opponentName ? 'group-hover:translate-x-1 transition-transform' : ''} />
               </button>
               
               <div className="mt-8 p-4 rounded-2xl bg-blue-50 border border-blue-100 flex gap-3 max-w-lg">
                 <AlertCircle size={18} className="text-cloud9-blue shrink-0" />
                 <p className="text-[10px] text-slate-600 font-medium leading-relaxed">
-                  SYSTEM READY: Calibrating MIE neural weights for <span className="text-cloud9-blue font-bold">{selectedGame}</span>. Tactical suggestions will be optimized for <span className="text-cloud9-blue font-bold">{teamName || 'CLOU9'}</span> vs <span className="text-rose-600 font-bold">{opponentName || 'OPPONENT'}</span>.
+                  {teamName && opponentName ? (
+                    <>
+                      SYSTEM READY: Calibrating MIE neural weights for <span className="text-cloud9-blue font-bold">{selectedGame}</span>. 
+                      Tactical suggestions optimized for <span className="text-cloud9-blue font-bold">{teamName}</span> vs <span className="text-rose-600 font-bold">{opponentName}</span>.
+                    </>
+                  ) : (
+                    <>
+                      AWAITING INPUT: Start typing team names to see suggestions. Both teams must be selected from the {selectedGame} team database to proceed.
+                    </>
+                  )}
                 </p>
               </div>
             </div>
