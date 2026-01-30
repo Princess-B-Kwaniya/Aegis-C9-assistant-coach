@@ -67,10 +67,18 @@ class MacroImpactEngine:
 app = FastAPI()
 mie = MacroImpactEngine()
 
-# Enable CORS so your Vercel frontend can talk to this local server
+# Enable CORS so your Vercel frontend can talk to this backend server
+origins = [
+    "https://aegis-c9-frontend.vercel.app", # Specific Vercel URL
+    "https://aegis-c9-assistant-coach.vercel.app", # Potential alternative based on repo name
+    "http://localhost:3000", # Local Next.js development
+    "http://localhost:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, replace with your Vercel URL
+    allow_origins=["*"], # Keeping wildcard for now to ensure connectivity, but adding credentials support
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
