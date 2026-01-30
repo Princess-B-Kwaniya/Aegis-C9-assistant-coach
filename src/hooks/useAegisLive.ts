@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { PlayerData, GameState, Anomaly } from '@/types';
-import { generateRandomAnomaly } from '@/utils/simulation';
+
+const API_BASE_URL = 'https://aegis-c9-backend.onrender.com';
 
 export const useAegisLive = () => {
-  const [game, setGame] = useState<GameState>({ winProbability: 52, tempo: 65, anomalies: [] });
+  const [game, setGame] = useState<GameState>({ winProbability: 50, tempo: 50, anomalies: [] });
   const [players, setPlayers] = useState<PlayerData[]>([
     { id: 1, name: 'Zven', role: 'ADC', stress: 20, impact: 98, status: 'optimal', recentErrors: 0 },
     { id: 2, name: 'Blaber', role: 'Jungle', stress: 25, impact: 95, status: 'optimal', recentErrors: 0 },
@@ -13,52 +14,36 @@ export const useAegisLive = () => {
   ]);
 
   useEffect(() => {
-    // Regular interval for small fluctuations and state updates
-    const regularTimer = setInterval(() => {
-      setGame(prev => ({
-        ...prev,
-        winProbability: Math.min(Math.max(prev.winProbability + (Math.random() * 0.4 - 0.2), 5), 95),
-        tempo: Math.min(Math.max(prev.tempo + (Math.random() * 2 - 1), 0), 100),
-      }));
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/stats?series_id=2616372`);
+        const data = await response.json();
 
-      setPlayers(prev => prev.map(p => {
-        const stressDelta = (Math.random() * 2 - 0.8);
-        const newStress = Math.min(Math.max(p.stress + stressDelta, 10), 100);
-        return {
-          ...p,
-          stress: newStress,
-          status: newStress > 75 ? 'critical' : newStress > 45 ? 'warning' : 'optimal'
-        };
-      }));
-    }, 3000);
-
-    // Simulation interval for Anomaly triggers (every 10-15 seconds)
-    const triggerAnomaly = () => {
-      const newAnomaly = generateRandomAnomaly(players);
-      
-      setGame(prev => ({
-        ...prev,
-        winProbability: Math.min(Math.max(prev.winProbability + newAnomaly.impact, 5), 95),
-        anomalies: [...prev.anomalies, newAnomaly].slice(-50)
-      }));
-
-      setPlayers(prev => prev.map(p => 
-        p.name === newAnomaly.playerTarget ? { ...p, recentErrors: p.recentErrors + 1, stress: Math.min(p.stress + 10, 100) } : p
-      ));
-
-      // Schedule next anomaly
-      const nextDelay = Math.floor(Math.random() * 5000) + 10000; // 10-15 seconds
-      setTimeout(triggerAnomaly, nextDelay);
+        if (data.series) {
+          // Map team names to player data if possible, or just update based on the series info
+          // Since the API only returns series and teams currently, we'll keep the static player list 
+          // but could update their status or other metrics if the API expands.
+          
+          // For now, let's fluctuate the existing data slightly based on the fact that we have live data
+          // or just confirm the connection.
+          
+          setGame(prev => ({
+            ...prev,
+            // If the API provided real win prob, we'd use it here.
+            // For now, let's keep it stable or use a dummy value from the live response if available.
+            winProbability: data.status === 'simulated' ? 52.4 : prev.winProbability
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching Aegis live stats:", error);
+      }
     };
 
-    const firstDelay = Math.floor(Math.random() * 5000) + 10000;
-    const initialAnomalyTimeout = setTimeout(triggerAnomaly, firstDelay);
+    fetchData();
+    const interval = setInterval(fetchData, 10000); // Fetch every 10 seconds
 
-    return () => {
-      clearInterval(regularTimer);
-      clearTimeout(initialAnomalyTimeout);
-    };
-  }, []); // Empty dependency array because we use functional updates and we want the loop to manage itself
+    return () => clearInterval(interval);
+  }, []);
 
   return { game, players };
 };
