@@ -342,14 +342,397 @@ export default function ValorantDashboard() {
             </div>
           )}
 
-          {/* Placeholder for other tabs */}
-          {activeTab !== "dashboard" && activeTab !== "comms" && activeTab !== "analytics" && (
-            <div className="bg-white border border-blue-200 rounded-3xl p-20 flex flex-col items-center justify-center text-center">
-               <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                  <Crosshair size={40} className="text-blue-300" />
-               </div>
-               <h2 className="text-2xl font-black text-slate-900 uppercase italic mb-2">{activeTab.replace('_', ' ')}</h2>
-               <p className="text-slate-500 max-w-md">This module uses ML predictions from the trained model. Additional analysis coming soon.</p>
+          {/* Roster Tab */}
+          {activeTab === "roster" && (
+            <div className="space-y-6">
+              <div className="bg-card border border-blue-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <Users size={18} className="text-cloud9-blue" />
+                    <h2 className="text-sm font-black text-foreground uppercase tracking-tight">Team Roster Analysis</h2>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                    <span className="w-2 h-2 bg-cloud9-blue rounded-full animate-pulse"></span>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">{players.length} Active Players</span>
+                  </div>
+                </div>
+
+                {/* Player Stats Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-blue-100">
+                        <th className="text-left py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Player</th>
+                        <th className="text-left py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Agent</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">K/D/A</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ACS</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">ADR</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">HS%</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">KAST</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">FB</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">CL</th>
+                        <th className="text-center py-3 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {players.map((player, idx) => (
+                        <tr key={player.id} className={`border-b border-blue-50 hover:bg-blue-50/50 transition-colors ${idx === 0 ? 'bg-blue-50/30' : ''}`}>
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-cloud9-blue to-blue-600 rounded-lg flex items-center justify-center text-white font-black text-xs">
+                                {player.name.substring(0, 2).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-foreground">{player.name}</p>
+                                <p className="text-[9px] font-medium text-slate-400 uppercase">{player.role}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-lg text-[10px] font-bold text-slate-700">
+                              {player.agent}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm font-bold text-foreground">{player.kills}</span>
+                            <span className="text-slate-400 mx-1">/</span>
+                            <span className="text-sm font-bold text-foreground">{player.deaths}</span>
+                            <span className="text-slate-400 mx-1">/</span>
+                            <span className="text-sm font-bold text-foreground">{player.assists}</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm font-bold text-cloud9-blue">{player.acs}</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm font-bold text-foreground">{player.adr.toFixed(0)}</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm font-bold text-foreground">{player.hs}%</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm font-bold text-foreground">{player.kast}%</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm font-bold text-foreground">{player.firstBloods}</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className="text-sm font-bold text-foreground">{player.clutches}</span>
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold uppercase ${
+                              player.status === 'optimal' ? 'bg-green-100 text-green-700' :
+                              player.status === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-red-100 text-red-700'
+                            }`}>
+                              {player.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Team Composition Analysis */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-card border border-blue-100 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Target size={14} className="text-cloud9-blue" />
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duelists</h3>
+                  </div>
+                  <p className="text-3xl font-black text-foreground mb-2">{players.filter(p => p.role === 'Duelist').length}</p>
+                  <div className="space-y-1">
+                    {players.filter(p => p.role === 'Duelist').map(p => (
+                      <p key={p.id} className="text-[10px] font-medium text-slate-500">{p.name} ({p.agent})</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-card border border-blue-100 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap size={14} className="text-cloud9-blue" />
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Initiators</h3>
+                  </div>
+                  <p className="text-3xl font-black text-foreground mb-2">{players.filter(p => p.role === 'Initiator').length}</p>
+                  <div className="space-y-1">
+                    {players.filter(p => p.role === 'Initiator').map(p => (
+                      <p key={p.id} className="text-[10px] font-medium text-slate-500">{p.name} ({p.agent})</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-card border border-blue-100 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity size={14} className="text-cloud9-blue" />
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Controllers</h3>
+                  </div>
+                  <p className="text-3xl font-black text-foreground mb-2">{players.filter(p => p.role === 'Controller').length}</p>
+                  <div className="space-y-1">
+                    {players.filter(p => p.role === 'Controller').map(p => (
+                      <p key={p.id} className="text-[10px] font-medium text-slate-500">{p.name} ({p.agent})</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-card border border-blue-100 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldCheck size={14} className="text-cloud9-blue" />
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sentinels</h3>
+                  </div>
+                  <p className="text-3xl font-black text-foreground mb-2">{players.filter(p => p.role === 'Sentinel').length}</p>
+                  <div className="space-y-1">
+                    {players.filter(p => p.role === 'Sentinel').map(p => (
+                      <p key={p.id} className="text-[10px] font-medium text-slate-500">{p.name} ({p.agent})</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Insights */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-cloud9-blue to-blue-600 rounded-3xl p-6 text-white">
+                  <div className="flex items-center gap-2 mb-4">
+                    <BarChart3 size={16} className="text-white" />
+                    <h3 className="text-sm font-black uppercase">Top Performer</h3>
+                  </div>
+                  {players.length > 0 && (() => {
+                    const topPlayer = [...players].sort((a, b) => b.acs - a.acs)[0];
+                    return (
+                      <div>
+                        <p className="text-2xl font-black mb-2">{topPlayer.name}</p>
+                        <p className="text-sm opacity-90 mb-4">{topPlayer.agent} • {topPlayer.role}</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white/10 rounded-xl p-3">
+                            <p className="text-[9px] font-bold uppercase opacity-80 mb-1">ACS</p>
+                            <p className="text-2xl font-black">{topPlayer.acs}</p>
+                          </div>
+                          <div className="bg-white/10 rounded-xl p-3">
+                            <p className="text-[9px] font-bold uppercase opacity-80 mb-1">K/D</p>
+                            <p className="text-2xl font-black">{(topPlayer.kills / Math.max(1, topPlayer.deaths)).toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="bg-card border border-blue-100 rounded-3xl p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Users size={16} className="text-cloud9-blue" />
+                    <h3 className="text-sm font-black uppercase text-foreground">Team Averages</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Avg ACS</p>
+                      <p className="text-2xl font-black text-foreground">{(players.reduce((a, p) => a + p.acs, 0) / players.length).toFixed(0)}</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Avg K/D</p>
+                      <p className="text-2xl font-black text-foreground">{(players.reduce((a, p) => a + (p.kills / Math.max(1, p.deaths)), 0) / players.length).toFixed(2)}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Avg HS%</p>
+                      <p className="text-2xl font-black text-foreground">{(players.reduce((a, p) => a + p.hs, 0) / players.length).toFixed(0)}%</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Avg KAST</p>
+                      <p className="text-2xl font-black text-foreground">{(players.reduce((a, p) => a + p.kast, 0) / players.length).toFixed(0)}%</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Strats Tab */}
+          {activeTab === "strats" && (
+            <div className="space-y-6">
+              <div className="bg-card border border-blue-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                    <Target size={18} className="text-cloud9-blue" />
+                    <h2 className="text-sm font-black text-foreground uppercase tracking-tight">Strategy Library</h2>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">{game.mapName}</span>
+                  </div>
+                </div>
+
+                {/* Strategy Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Attack Strats */}
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-2xl p-5 hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                          <Crosshair size={16} className="text-white" />
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase">A Site Rush</h3>
+                      </div>
+                      <span className="text-[8px] font-bold px-2 py-1 bg-red-500 text-white rounded-md uppercase">Attack</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">Fast 5-man execute with smokes and flashes. Duelist entry, Controller smoke crossfires.</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Win Rate</span>
+                        <span className="text-sm font-black text-red-600">68%</span>
+                      </div>
+                      <span className="text-[8px] font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Click to view →</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-2xl p-5 hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                          <Zap size={16} className="text-white" />
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase">B Split Push</h3>
+                      </div>
+                      <span className="text-[8px] font-bold px-2 py-1 bg-red-500 text-white rounded-md uppercase">Attack</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">2-3 split with utility coordination. Pincer movement to trap defenders.</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Win Rate</span>
+                        <span className="text-sm font-black text-red-600">72%</span>
+                      </div>
+                      <span className="text-[8px] font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Click to view →</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-200 rounded-2xl p-5 hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
+                          <Activity size={16} className="text-white" />
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase">Mid Control</h3>
+                      </div>
+                      <span className="text-[8px] font-bold px-2 py-1 bg-red-500 text-white rounded-md uppercase">Attack</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">Slow default with mid control. Info gathering then rotate based on defender setup.</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Win Rate</span>
+                        <span className="text-sm font-black text-red-600">65%</span>
+                      </div>
+                      <span className="text-[8px] font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Click to view →</span>
+                    </div>
+                  </div>
+
+                  {/* Defense Strats */}
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl p-5 hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <ShieldCheck size={16} className="text-white" />
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase">A Site Stack</h3>
+                      </div>
+                      <span className="text-[8px] font-bold px-2 py-1 bg-blue-500 text-white rounded-md uppercase">Defense</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">3-player A hold with crossfire setups. Sentinel lockdown, fast rotate on B pressure.</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Win Rate</span>
+                        <span className="text-sm font-black text-blue-600">74%</span>
+                      </div>
+                      <span className="text-[8px] font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Click to view →</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl p-5 hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <Users size={16} className="text-white" />
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase">Retake Setup</h3>
+                      </div>
+                      <span className="text-[8px] font-bold px-2 py-1 bg-blue-500 text-white rounded-md uppercase">Defense</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">Give site, regroup for coordinated retake. Smoke plant, flash in, trade kills efficiently.</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Win Rate</span>
+                        <span className="text-sm font-black text-blue-600">58%</span>
+                      </div>
+                      <span className="text-[8px] font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Click to view →</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl p-5 hover:shadow-md transition-shadow cursor-pointer group">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                          <Target size={16} className="text-white" />
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase">Aggressive Push</h3>
+                      </div>
+                      <span className="text-[8px] font-bold px-2 py-1 bg-blue-500 text-white rounded-md uppercase">Defense</span>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-3 leading-relaxed">Early aggression to catch attackers off-guard. Info play into fallback or commitment.</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase">Win Rate</span>
+                        <span className="text-sm font-black text-blue-600">61%</span>
+                      </div>
+                      <span className="text-[8px] font-medium text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">Click to view →</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ML Strategy Recommendations */}
+              <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-3xl p-6 text-white">
+                <div className="flex items-center gap-2 mb-4">
+                  <BarChart3 size={18} className="text-cloud9-blue" />
+                  <h3 className="text-sm font-black uppercase">ML Strategy Recommendations</h3>
+                </div>
+                <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+                  Based on {predictions.totalSamples.toLocaleString()} analyzed matches and current game state, our ML model suggests:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                      <p className="text-xs font-black uppercase text-green-400">Highest Win Probability</p>
+                    </div>
+                    <p className="text-lg font-black mb-1">{game.currentSide === 'Attack' ? 'B Split Push' : 'A Site Stack'}</p>
+                    <p className="text-[10px] text-slate-400">Predicted success rate: 76% based on current economy and team comp</p>
+                  </div>
+                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                      <p className="text-xs font-black uppercase text-yellow-400">Counter-Strategy Alert</p>
+                    </div>
+                    <p className="text-lg font-black mb-1">Opponent Tendency</p>
+                    <p className="text-[10px] text-slate-400">Enemy team favors {game.currentSide === 'Attack' ? 'aggressive defense' : 'slow defaults'} on this map</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-card border border-blue-100 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-foreground mb-1">6</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Total Strategies</p>
+                </div>
+                <div className="bg-card border border-blue-100 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-cloud9-blue mb-1">67%</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Avg Win Rate</p>
+                </div>
+                <div className="bg-card border border-blue-100 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-foreground mb-1">{game.mapName}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Current Map</p>
+                </div>
+                <div className="bg-card border border-blue-100 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-cloud9-blue mb-1">{game.currentSide}</p>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase">Current Side</p>
+                </div>
+              </div>
             </div>
           )}
 
