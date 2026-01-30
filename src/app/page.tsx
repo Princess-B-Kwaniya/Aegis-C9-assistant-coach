@@ -5,6 +5,7 @@ import { useAegisLive } from "@/hooks/useAegisLive";
 import PlayerCard from "@/components/dashboard/PlayerCard";
 import WinProbChart from "@/components/dashboard/WinProbChart";
 import SquadMetricsChart from "@/components/dashboard/SquadMetricsChart";
+import { SquadMetric } from "@/types";
 import TacticalComms from "@/components/dashboard/TacticalComms";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WelcomePage } from "@/components/layout/WelcomePage";
@@ -144,8 +145,8 @@ export default function Home() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3 md:gap-4">
                   {players.map((player, idx) => {
-                    const squadMetrics = telemetry?.mie_analysis?.squad_telemetry || [];
-                    const metric = squadMetrics.find(m => m.name === player.name) || squadMetrics[idx];
+                    const squadMetrics: SquadMetric[] = telemetry?.mie_analysis?.squad_telemetry || [];
+                    const metric = squadMetrics.find((m: SquadMetric) => m.name === player.name) || squadMetrics[idx];
                     return <PlayerCard key={player.id} player={player} squadMetric={metric} />;
                   })}
                 </div>
