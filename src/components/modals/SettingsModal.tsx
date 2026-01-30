@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { X, Bell, Moon, Globe, Database, RefreshCw } from 'lucide-react';
+import { X, Bell, Globe, Database, RefreshCw } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -10,7 +10,6 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = React.useState(true);
-  const [darkMode, setDarkMode] = React.useState(false);
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const [refreshInterval, setRefreshInterval] = React.useState(3);
   const [backendUrl, setBackendUrl] = React.useState(
@@ -24,7 +23,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const handleSave = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('notifications', notifications.toString());
-      localStorage.setItem('darkMode', darkMode.toString());
       localStorage.setItem('autoRefresh', autoRefresh.toString());
       localStorage.setItem('refreshInterval', refreshInterval.toString());
       localStorage.setItem('backendUrl', backendUrl);
@@ -79,28 +77,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                     notifications ? 'translate-x-7' : 'translate-x-0'
                   }`}
                 />
-              </button>
-            </div>
-          </div>
-
-          {/* Dark Mode */}
-          <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-slate-700/10 rounded-xl flex items-center justify-center">
-                  <Moon size={20} className="text-slate-700" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 uppercase">Dark Mode</h3>
-                  <p className="text-xs text-slate-500">Switch to dark theme (coming soon)</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                disabled
-                className={`relative w-14 h-7 rounded-full transition-colors bg-slate-300 opacity-50 cursor-not-allowed`}
-              >
-                <div className="absolute top-1 left-1 w-5 h-5 bg-white rounded-full" />
               </button>
             </div>
           </div>
