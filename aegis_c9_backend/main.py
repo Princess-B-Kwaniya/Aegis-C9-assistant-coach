@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from bridge import fetch_aegis_data
+from find_live_match import get_live_predictions
 
 app = FastAPI()
 
@@ -15,6 +16,8 @@ app.add_middleware(
 @app.get("/api/stats")
 async def get_stats(series_id: str = "2616372"):
     data = fetch_aegis_data(series_id)
+    if "players" in data:
+        data["predictions"] = get_live_predictions(data)
     return data
 
 if __name__ == "__main__":
