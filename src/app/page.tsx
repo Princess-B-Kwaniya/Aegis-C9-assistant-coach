@@ -5,18 +5,25 @@ import { useAegisLive } from "@/hooks/useAegisLive";
 import PlayerCard from "@/components/dashboard/PlayerCard";
 import WinProbChart from "@/components/dashboard/WinProbChart";
 import SquadMetricsChart from "@/components/dashboard/SquadMetricsChart";
+import CommsChart from "@/components/dashboard/CommsChart";
+import MacroPieChart from "@/components/dashboard/MacroPieChart";
 import { SquadMetric } from "@/types";
 import TacticalComms from "@/components/dashboard/TacticalComms";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WelcomePage } from "@/components/layout/WelcomePage";
-import { Activity, ShieldCheck, Zap, BarChart3, Users, LayoutDashboard, FileText, Download, Menu } from "lucide-react";
+import { Activity, ShieldCheck, Zap, BarChart3, Users, LayoutDashboard, FileText, Download, Menu, MessageSquare } from "lucide-react";
 
 export default function Home() {
   const [isStarted, setIsStarted] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [sessionData, setSessionData] = useState({ teamName: "", opponentName: "", game: "" });
   const { game, players, telemetry } = useAegisLive(sessionData.teamName, sessionData.opponentName);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleStart = (teamName: string, opponentName: string, selectedGame: string) => {
     setSessionData({ teamName, opponentName, game: selectedGame });
@@ -34,6 +41,10 @@ export default function Home() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-slate-50" />;
+  }
 
   if (!isStarted) {
     return <WelcomePage onStart={handleStart} />;
@@ -153,21 +164,44 @@ export default function Home() {
               </div>
 
               {/* Center Column: WinProbChart */}
-              <div className="xl:col-span-6 order-1 xl:order-2 flex flex-col bg-card border border-border-custom rounded-3xl p-4 md:p-6 lg:p-8 relative overflow-hidden shadow-sm h-fit min-h-[400px] md:min-h-[500px]">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 size={18} className="text-cloud9-blue" />
-                    <h2 className="text-xs md:text-sm font-black text-foreground uppercase tracking-tight">Probability Matrix</h2>
-                  </div>
-                  <div className="flex gap-4">
+              <div className="xl:col-span-6 order-1 xl:order-2 space-y-4 md:space-y-6">
+                <div className="flex flex-col bg-card border border-border-custom rounded-3xl p-4 md:p-6 lg:p-8 relative overflow-hidden shadow-sm h-fit min-h-[400px]">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-4">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-cloud9-blue"></span>
-                      <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase">Live Telemetry</span>
+                      <BarChart3 size={18} className="text-cloud9-blue" />
+                      <h2 className="text-xs md:text-sm font-black text-foreground uppercase tracking-tight">Probability Matrix</h2>
+                    </div>
+                    <div className="flex gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-cloud9-blue"></span>
+                        <span className="text-[9px] md:text-[10px] font-bold text-slate-400 uppercase">Live Telemetry</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex-1 bg-slate-50 rounded-2xl p-3 md:p-4 border border-slate-100">
+                    <WinProbChart currentProb={game.winProbability} />
+                  </div>
                 </div>
-                <div className="flex-1 bg-slate-50 rounded-2xl p-3 md:p-4 border border-slate-100">
-                  <WinProbChart currentProb={game.winProbability} />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Comms Density</p>
+                        <MessageSquare size={14} className="text-cloud9-blue" />
+                      </div>
+                      <CommsChart anomalies={game.anomalies} />
+                   </div>
+                   <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Macro Balance</p>
+                        <Zap size={14} className="text-neon-orange" />
+                      </div>
+                      {telemetry?.mie_analysis?.probability_metrics ? (
+                        <MacroPieChart data={telemetry.mie_analysis.probability_metrics} />
+                      ) : (
+                        <div className="h-[150px] flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">Awaiting Macro Data...</div>
+                      )}
+                   </div>
                 </div>
               </div>
 
@@ -241,13 +275,128 @@ export default function Home() {
           )}
 
           {activeTab === "comms" && (
-            <div className="h-[500px] md:h-[600px] lg:h-[700px] bg-card border border-border-custom rounded-3xl overflow-hidden shadow-sm">
-              <TacticalComms />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[700px]">
+              <div className="lg:col-span-8 bg-card border border-border-custom rounded-3xl overflow-hidden shadow-sm">
+                <TacticalComms />
+              </div>
+              <div className="lg:col-span-4 space-y-6">
+                <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                   <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Sentiment Analysis</p>
+                   <CommsChart anomalies={game.anomalies} />
+                </div>
+                <div className="bg-slate-900 rounded-3xl p-6 text-white">
+                   <h3 className="text-sm font-black uppercase mb-4 text-cloud9-blue">Live Analysis</h3>
+                   <p className="text-xs text-slate-400 leading-relaxed">
+                     Tactical uplink is processing {game.anomalies.length} active threads. 
+                     {game.anomalies.length > 5 ? " High volume of tactical shifts detected." : " Comm frequency is within nominal range."}
+                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "roster" && (
+            <div className="space-y-6">
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm col-span-1 lg:col-span-2">
+                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Squad Gold Distribution</p>
+                     {telemetry?.mie_analysis?.squad_telemetry ? (
+                       <SquadMetricsChart data={telemetry.mie_analysis.squad_telemetry} type="gold" />
+                     ) : (
+                       <div className="h-[250px] flex items-center justify-center text-slate-300">Awaiting Gold Data...</div>
+                     )}
+                  </div>
+                  <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Vision Control</p>
+                     {telemetry?.mie_analysis?.squad_telemetry ? (
+                       <SquadMetricsChart data={telemetry.mie_analysis.squad_telemetry} type="vision" />
+                     ) : (
+                       <div className="h-[250px] flex items-center justify-center text-slate-300">Awaiting Vision Data...</div>
+                     )}
+                  </div>
+               </div>
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {players.map((player, idx) => {
+                    const squadMetrics: SquadMetric[] = telemetry?.mie_analysis?.squad_telemetry || [];
+                    const metric = squadMetrics.find((m: SquadMetric) => m.name === player.name) || squadMetrics[idx];
+                    return <PlayerCard key={player.id} player={player} squadMetric={metric} />;
+                  })}
+               </div>
+            </div>
+          )}
+
+          {activeTab === "analytics" && (
+            <div className="space-y-6">
+               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-8 bg-card border border-border-custom rounded-3xl p-8 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                       <h2 className="text-lg font-black uppercase italic">Macro Performance Trends</h2>
+                       <BarChart3 className="text-cloud9-blue" size={20} />
+                    </div>
+                    <div className="h-[400px]">
+                      <WinProbChart currentProb={game.winProbability} />
+                    </div>
+                  </div>
+                  <div className="lg:col-span-4 space-y-6">
+                    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Objective Priority</p>
+                       {telemetry?.mie_analysis?.probability_metrics ? (
+                         <MacroPieChart data={telemetry.mie_analysis.probability_metrics} />
+                       ) : (
+                         <div className="h-[200px] flex items-center justify-center text-slate-300">Awaiting Data...</div>
+                       )}
+                    </div>
+                    <div className="bg-cloud9-blue rounded-3xl p-6 text-white shadow-lg shadow-cloud9-blue/20">
+                       <h3 className="text-sm font-black uppercase mb-2">Efficiency Rating</h3>
+                       <p className="text-4xl font-black mb-4">{game.tempo}%</p>
+                       <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                          <div className="bg-white h-full" style={{ width: `${game.tempo}%` }}></div>
+                       </div>
+                    </div>
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {activeTab === "drills" && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+               <div className="lg:col-span-4 bg-slate-900 rounded-3xl p-8 text-white flex flex-col justify-between">
+                  <div>
+                    <Zap className="text-neon-orange mb-6" size={32} />
+                    <h2 className="text-2xl font-black uppercase italic mb-4">Drill Generator</h2>
+                    <p className="text-slate-400 text-sm leading-relaxed mb-8">
+                      Aegis is identifying performance gaps in real-time. Training modules are generated based on micro-failures detected during the live session.
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                       <p className="text-[10px] font-bold text-slate-500 uppercase mb-1">Errors Tracked</p>
+                       <p className="text-2xl font-black">{players.reduce((acc, p) => acc + (p.recentErrors || 0), 0)}</p>
+                    </div>
+                    <button className="w-full bg-cloud9-blue text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-cloud9-blue/90 transition-colors">
+                      Generate Custom Plan
+                    </button>
+                  </div>
+               </div>
+               <div className="lg:col-span-8 bg-white border border-slate-100 rounded-3xl p-8 shadow-sm">
+                  <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-8">Performance Gap Analysis</p>
+                  <div className="h-[400px]">
+                    {telemetry?.mie_analysis?.squad_telemetry ? (
+                      <SquadMetricsChart data={telemetry.mie_analysis.squad_telemetry} type="cs" />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-slate-300">Awaiting Telemetry...</div>
+                    )}
+                  </div>
+                  <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                     <span className="text-xs font-bold text-slate-500 uppercase">Recommended Focus:</span>
+                     <span className="text-xs font-black text-cloud9-blue uppercase">Wave Management & Objective Rotation</span>
+                  </div>
+               </div>
             </div>
           )}
 
           {/* Placeholder for other tabs */}
-          {activeTab !== "dashboard" && activeTab !== "comms" && (
+          {activeTab !== "dashboard" && activeTab !== "comms" && activeTab !== "roster" && activeTab !== "analytics" && activeTab !== "drills" && (
             <div className="bg-white border border-slate-200 rounded-3xl p-20 flex flex-col items-center justify-center text-center">
                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
                   <Activity size={40} className="text-slate-300" />

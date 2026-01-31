@@ -34,7 +34,7 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
         }));
       }
 
-      if (data.players) {
+      if (data.players && data.players.length > 0) {
         setPlayers(data.players.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -76,6 +76,10 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
         const response = await fetch(`${API_BASE_URL}/stream-telemetry`, {
           signal: controller.signal
         });
+        
+        if (!response.ok) {
+          throw new Error(`Stream connection failed: ${response.status}`);
+        }
         
         const reader = response.body?.getReader();
         if (!reader) return;
@@ -149,11 +153,13 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
         }
       } catch (error: any) {
         if (error.name !== 'AbortError') {
-          console.error("Error fetching data stream:", error);
-          // Retry after a delay
-          setTimeout(() => {
-            if (isMounted) connectToStream();
-          }, 5000);
+          if (isMounted) {
+            console.log("Stream connection unavailable, retrying in 10s...");
+            // Retry after a longer delay to be less aggressive if backend is down
+            setTimeout(() => {
+              if (isMounted) connectToStream();
+            }, 10000);
+          }
         }
       }
     };

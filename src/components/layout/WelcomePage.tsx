@@ -110,7 +110,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
   const [teamName, setTeamName] = useState('');
   const [opponentName, setOpponentName] = useState('');
   const [selectedGame, setSelectedGame] = useState('League of Legends');
-  const [bgImage, setBgImage] = useState(0);
+  const [bgImage, setBgImage] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const router = useRouter();
@@ -137,8 +138,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
   const currentTeamList = selectedGame === 'VALORANT' ? valorantTeams : lolTeams;
 
   useEffect(() => {
+    setMounted(true);
+    setBgImage(0);
     const interval = setInterval(() => {
-      setBgImage((prev) => (prev + 1) % games.length);
+      setBgImage((prev) => (prev !== null ? (prev + 1) % games.length : 0));
     }, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -198,6 +201,10 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
     }
   };
 
+  if (!mounted) {
+    return <div className="min-h-screen bg-slate-50" />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden text-slate-900">
       {/* Alert Modal */}
@@ -227,18 +234,19 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
       {games.map((game, index) => (
         <div 
           key={game.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${bgImage === index ? 'opacity-10' : 'opacity-0'}`}
+          className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
           style={{ 
             backgroundImage: `linear-gradient(to bottom, rgba(248,250,252,0.8), rgba(248,250,252,1)), url(${game.img})`,
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            opacity: bgImage !== null && bgImage === index ? 0.1 : 0
           }}
         />
       ))}
 
       <div className="max-w-4xl w-full z-10">
         {/* Header */}
-        <div className="text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="text-center mb-12 duration-700">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-md rounded-full border border-slate-200 shadow-sm mb-6">
             <Shield size={16} className="text-blue-600" />
             <span className="text-[10px] font-black text-blue-900 uppercase tracking-[0.2em]">Next-Gen Neural Uplink</span>
@@ -264,7 +272,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
         </div>
 
         {/* Configuration Card */}
-        <div className="bg-white/80 backdrop-blur-xl border border-slate-200 rounded-[40px] p-8 md:p-12 shadow-2xl shadow-blue-100/50 animate-in zoom-in-95 duration-700">
+        <div className="bg-white/80 backdrop-blur-xl border border-slate-200 rounded-[40px] p-8 md:p-12 shadow-2xl shadow-blue-100/50 duration-700">
           <div className="space-y-10">
             {/* Game Selector */}
             <div>
@@ -396,24 +404,6 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart }) => {
           display: inline-block;
           animation: marquee 30s linear infinite;
         }
-        @keyframes fade-in {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slide-in-from-top {
-          from { transform: translateY(-20px); }
-          to { transform: translateY(0); }
-        }
-        @keyframes zoom-in {
-          from { transform: scale(0.95); opacity: 0; }
-          to { transform: scale(1); opacity: 1; }
-        }
-        .animate-in {
-          animation: 0.5s ease-out forwards;
-        }
-        .fade-in { animation-name: fade-in; }
-        .slide-in-from-top-4 { animation-name: fade-in, slide-in-from-top; }
-        .zoom-in-95 { animation-name: zoom-in; }
       `}</style>
     </div>
   );
