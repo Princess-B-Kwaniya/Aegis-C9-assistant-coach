@@ -12,9 +12,9 @@ import { WelcomePage } from "@/components/layout/WelcomePage";
 import { Activity, ShieldCheck, Zap, BarChart3, Users, LayoutDashboard, FileText, Download, Menu } from "lucide-react";
 
 export default function Home() {
-  const { game, players, telemetry } = useAegisLive();
   const [isStarted, setIsStarted] = useState(false);
   const [sessionData, setSessionData] = useState({ teamName: "", opponentName: "", game: "" });
+  const { game, players, telemetry } = useAegisLive(sessionData.teamName, sessionData.opponentName);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 

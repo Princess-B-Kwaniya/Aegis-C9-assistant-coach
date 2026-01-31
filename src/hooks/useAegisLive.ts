@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PlayerData, GameState, Anomaly } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
-export const useAegisLive = () => {
+export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string = 'Opponent') => {
   const [game, setGame] = useState<GameState>({ winProbability: 50, tempo: 50, anomalies: [] });
   const [telemetry, setTelemetry] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const [players, setPlayers] = useState<PlayerData[]>([
     { id: 1, name: 'Zven', role: 'ADC', stress: 20, impact: 98, status: 'optimal', recentErrors: 0 },
     { id: 2, name: 'Blaber', role: 'Jungle', stress: 25, impact: 95, status: 'optimal', recentErrors: 0 },
@@ -13,6 +14,58 @@ export const useAegisLive = () => {
     { id: 4, name: 'Berserker', role: 'Top', stress: 22, impact: 96, status: 'optimal', recentErrors: 0 },
     { id: 5, name: 'Vulcan', role: 'Support', stress: 28, impact: 94, status: 'optimal', recentErrors: 0 },
   ]);
+
+  const fetchLolPredictions = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/lol-predictions?team=${encodeURIComponent(teamName)}&opponent=${encodeURIComponent(opponentName)}`
+      );
+      
+      if (!response.ok) throw new Error('Backend unavailable');
+      
+      const data = await response.json();
+      setIsConnected(true);
+      setTelemetry(data);
+
+      if (data.prediction) {
+        setGame(prev => ({
+          ...prev,
+          winProbability: data.prediction.win_probability
+        }));
+      }
+
+      if (data.players) {
+        setPlayers(data.players.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          role: p.role,
+          stress: Math.floor(Math.random() * 30) + 10,
+          impact: p.impact,
+          status: p.status,
+          recentErrors: 0
+        })));
+      }
+    } catch (error) {
+      console.log('Using local predictions (backend unavailable)');
+      setIsConnected(false);
+      
+      // Fallback: random win prob
+      setGame(prev => ({
+        ...prev,
+        winProbability: Math.min(95, Math.max(5, prev.winProbability + (Math.random() * 4 - 2)))
+      }));
+    }
+  }, [teamName, opponentName]);
+
+  useEffect(() => {
+    // Initial fetch
+    fetchLolPredictions();
+    
+    // Poll for updates every 3 seconds (similar to Valorant)
+    const interval = setInterval(fetchLolPredictions, 3000);
+    
+    return () => clearInterval(interval);
+  }, [fetchLolPredictions]);
 
   useEffect(() => {
     let isMounted = true;
