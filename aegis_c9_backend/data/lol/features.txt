@@ -1,0 +1,16 @@
+deaths
+kills
+assists
+KDA_Ratio
+Kill_Death_Diff
+Survival_Rate
+Assist_Ratio
+Gold_Efficiency
+Gold_Spent_Ratio
+Damage_Efficiency
+Damage_Per_Gold
+Damage_Taken_Ratio
+Vision_Per_Min
+Objective_Control
+Final_Power_Score
+kill_participation

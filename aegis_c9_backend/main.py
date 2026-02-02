@@ -228,7 +228,15 @@ class LoLPredictor:
     def __init__(self):
         self.model = None
         self.scaler = None
-        self.features = ['kills', 'deaths', 'assists', 'gold_earned', 'KDA', 'GPM']
+        # Features matching the trained model from CSV data
+        self.features = [
+            'deaths', 'kills', 'assists', 
+            'KDA_Ratio', 'Kill_Death_Diff', 'Survival_Rate', 'Assist_Ratio',
+            'Gold_Efficiency', 'Gold_Spent_Ratio',
+            'Damage_Efficiency', 'Damage_Per_Gold', 'Damage_Taken_Ratio',
+            'Vision_Per_Min', 'Objective_Control', 'Final_Power_Score',
+            'kill_participation'
+        ]
         self._load_model()
     
     def _load_model(self):
@@ -251,10 +259,10 @@ class LoLPredictor:
         except Exception as e:
             print(f"Error loading LoL model: {e}")
     
-    def predict(self, team_stats: dict):
+    def predict(self, team_stats: dict, opponent_stats: dict):
         """Generate win probability prediction based on team stats"""
         if not self.model or not self.scaler:
-            return self._simulate_prediction()
+            return self._simulate_prediction(team_stats, opponent_stats)
         
         try:
             # Calculate aggregated team features
@@ -279,35 +287,66 @@ class LoLPredictor:
             }
         except Exception as e:
             print(f"LoL Prediction error: {e}")
-            return self._simulate_prediction()
+            return self._simulate_prediction(team_stats, opponent_stats)
     
     def _extract_features(self, stats: dict):
-        """Extract model features from team stats"""
-        kills = stats.get('kills', 25)
-        deaths = stats.get('deaths', 20)
-        assists = stats.get('assists', 45)
-        gold = stats.get('gold_earned', 45000)
-        duration = stats.get('game_duration', 1800) # 30 mins default
+        """Extract model features from team stats - matching CSV columns"""
+        kills = stats.get('kills', 8)
+        deaths = stats.get('deaths', 5)
+        assists = stats.get('assists', 10)
+        gold_earned = stats.get('gold_earned', 12000)
+        gold_spent = stats.get('gold_spent', 11000)
+        duration = stats.get('duration', 1800)  # 30 mins default in seconds
+        damage_dealt = stats.get('damage_dealt', 150000)
+        damage_to_champ = stats.get('damage_to_champ', 25000)
+        damage_taken = stats.get('damage_taken', 20000)
+        vision_score = stats.get('vision_score', 25)
+        kill_participation = stats.get('kill_participation', 0.5)
+        baron_kills = stats.get('team_baronKills', 1)
+        dragon_kills = stats.get('team_dragonKills', 3)
+        rift_herald_kills = stats.get('team_riftHeraldKills', 1)
+        tower_kills = stats.get('team_towerKills', 6)
+        inhibitor_kills = stats.get('team_inhibitorKills', 1)
+        final_attack_damage = stats.get('final_attackDamage', 250)
+        final_ability_power = stats.get('final_abilityPower', 0)
+        final_armor = stats.get('final_armor', 150)
+        final_health = stats.get('final_health', 2500)
         
-        kda = (kills + assists) / (deaths + 1)
+        # Engineered features matching training script
+        kda_ratio = (kills + assists) / (deaths + 1)
+        kill_death_diff = kills - deaths
+        survival_rate = 1.0 / (deaths + 1)
+        assist_ratio = assists / (kills + 1)
+        gold_efficiency = gold_earned / (duration / 60.0 + 1)
+        gold_spent_ratio = gold_spent / (gold_earned + 1)
+        damage_efficiency = damage_to_champ / (damage_dealt + 1)
+        damage_per_gold = damage_to_champ / (gold_earned + 1)
+        damage_taken_ratio = damage_taken / (damage_dealt + 1)
+        vision_per_min = vision_score / (duration / 60.0 + 1)
+        objective_control = (
+            baron_kills * 3 + 
+            dragon_kills * 2 + 
+            rift_herald_kills * 1.5 + 
+            tower_kills + 
+            inhibitor_kills * 2
+        ) / 20.0
+        final_power_score = (
+            final_attack_damage + 
+            final_ability_power + 
+            final_armor + 
+            final_health / 10
+        ) / 100.0
         
-        # Kill Participation placeholder (simplified as in training script)
-        # master_df['Kill_Participation'] = master_df['kills'] / (master_df['kills'].mean() + 1)
-        # We don't have the mean here, so we use a reasonable default mean for high level play (~15-20)
-        kill_participation = kills / (18 + 1)
-        
-        gpm = gold / (duration / 60.0)
-        
-        # Features order in training script: ['kills', 'deaths', 'assists', 'gold_earned', 'KDA', 'GPM']
-        # Wait, the training script has:
-        # ENGINEERED_FEATURES = [col for col in ['kills', 'deaths', 'assists', 'gold_earned', 'KDA', 'GPM'] if col in master_df.columns]
-        # But Phase 3 also mentions 'Kill_Participation'
-        # Let's check exactly what ENGINEERED_FEATURES contains.
-        # Line 80: ENGINEERED_FEATURES = [col for col in ['kills', 'deaths', 'assists', 'gold_earned', 'KDA', 'GPM'] if col in master_df.columns]
-        
-        return [kills, deaths, assists, gold, kda, gpm]
+        return [
+            deaths, kills, assists,
+            kda_ratio, kill_death_diff, survival_rate, assist_ratio,
+            gold_efficiency, gold_spent_ratio,
+            damage_efficiency, damage_per_gold, damage_taken_ratio,
+            vision_per_min, objective_control, final_power_score,
+            kill_participation
+        ]
     
-    def _simulate_prediction(self):
+    def _simulate_prediction(self, team_stats: dict, opponent_stats: dict):
         """Fallback simulation when model not available"""
         base_prob = 50 + random.uniform(-15, 15)
         return {
@@ -398,62 +437,160 @@ async def stream_telemetry(series_id: str = "2616372"):
 async def get_lol_predictions(team: str = "Cloud9", opponent: str = "Opponent"):
     """Get League of Legends win probability predictions using trained XGBoost model"""
     
-    # Generate realistic LoL stats
+    # LoL Champions by Role
+    CHAMPIONS = {
+        'TOP': ['Aatrox', 'Gnar', 'Jax', 'Renekton', 'Camille', 'Fiora', 'K\'Sante', 'Rumble'],
+        'JUNGLE': ['Lee Sin', 'Vi', 'Viego', 'Rek\'Sai', 'Elise', 'Jarvan IV', 'Nidalee', 'Maokai'],
+        'MIDDLE': ['Azir', 'Ahri', 'Syndra', 'Orianna', 'Viktor', 'Corki', 'Neeko', 'LeBlanc'],
+        'BOTTOM': ['Jinx', 'Kai\'Sa', 'Xayah', 'Aphelios', 'Zeri', 'Varus', 'Ezreal', 'Jhin'],
+        'SUPPORT': ['Thresh', 'Nautilus', 'Leona', 'Renata', 'Rakan', 'Lulu', 'Alistar', 'Milio']
+    }
+    
+    MAPS = ['Summoner\'s Rift']
+    
+    # Team rosters for LoL
+    team_rosters = {
+        'Cloud9': [
+            {'name': 'Thanatos', 'position': 'TOP'},
+            {'name': 'Blaber', 'position': 'JUNGLE'},
+            {'name': 'Jojopyun', 'position': 'MIDDLE'},
+            {'name': 'Berserker', 'position': 'BOTTOM'},
+            {'name': 'Vulcan', 'position': 'SUPPORT'},
+        ],
+        'T1': [
+            {'name': 'Zeus', 'position': 'TOP'},
+            {'name': 'Oner', 'position': 'JUNGLE'},
+            {'name': 'Faker', 'position': 'MIDDLE'},
+            {'name': 'Gumayusi', 'position': 'BOTTOM'},
+            {'name': 'Keria', 'position': 'SUPPORT'},
+        ],
+        'Gen.G': [
+            {'name': 'Kiin', 'position': 'TOP'},
+            {'name': 'Canyon', 'position': 'JUNGLE'},
+            {'name': 'Chovy', 'position': 'MIDDLE'},
+            {'name': 'Peyz', 'position': 'BOTTOM'},
+            {'name': 'Lehends', 'position': 'SUPPORT'},
+        ],
+    }
+    
+    # Generate realistic LoL stats based on team tier
+    tier_s = ['T1', 'Gen.G', 'Bilibili Gaming', 'JD Gaming', 'Weibo Gaming']
+    tier_a = ['Cloud9', 'G2 Esports', 'Fnatic', 'Team Liquid', 'DRX', '100 Thieves']
+    
     def get_team_stats(team_name):
-        is_c9 = "cloud9" in team_name.lower()
+        is_tier_s = any(t.lower() in team_name.lower() for t in tier_s)
+        is_tier_a = any(t.lower() in team_name.lower() for t in tier_a)
         
-        base_kills = 22 if is_c9 else 18
-        base_deaths = 15 if is_c9 else 20
-        base_assists = 45 if is_c9 else 35
-        base_gold = 52000 if is_c9 else 48000
+        # Base stats based on tier
+        base_kills = 12 if is_tier_s else (10 if is_tier_a else 8)
+        base_deaths = 4 if is_tier_s else (6 if is_tier_a else 8)
+        base_gold = 14000 if is_tier_s else (12500 if is_tier_a else 11000)
         
         return {
-            "kills": base_kills + random.randint(-5, 8),
-            "deaths": base_deaths + random.randint(-4, 6),
-            "assists": base_assists + random.randint(-10, 15),
-            "gold_earned": base_gold + random.randint(-5000, 8000),
-            "game_duration": 1800 + random.randint(-300, 600)
+            "kills": base_kills + random.randint(-3, 5),
+            "deaths": base_deaths + random.randint(-2, 4),
+            "assists": random.randint(8, 18),
+            "gold_earned": base_gold + random.randint(-2000, 3000),
+            "gold_spent": base_gold - 1000 + random.randint(-1000, 1500),
+            "duration": 1800 + random.randint(-300, 600),  # 25-40 min games
+            "damage_dealt": 180000 + random.randint(-30000, 50000),
+            "damage_to_champ": 28000 + random.randint(-5000, 10000),
+            "damage_taken": 22000 + random.randint(-4000, 8000),
+            "vision_score": 28 + random.randint(-8, 15),
+            "kill_participation": 0.55 + random.uniform(-0.15, 0.2),
+            "team_baronKills": random.randint(0, 2),
+            "team_dragonKills": random.randint(2, 5),
+            "team_riftHeraldKills": random.randint(0, 2),
+            "team_towerKills": random.randint(4, 11),
+            "team_inhibitorKills": random.randint(0, 3),
+            "final_attackDamage": 280 + random.randint(-50, 100),
+            "final_abilityPower": random.choice([0, 450 + random.randint(-50, 100)]),
+            "final_armor": 160 + random.randint(-30, 50),
+            "final_health": 2800 + random.randint(-400, 600),
         }
     
     team_stats = get_team_stats(team)
-    prediction = lol_predictor.predict(team_stats)
+    opponent_stats = get_team_stats(opponent)
+    
+    # Get prediction from trained model
+    prediction = lol_predictor.predict(team_stats, opponent_stats)
     
     # Generate player-specific data
     players = []
-    roles = ['Top', 'Jungle', 'Mid', 'ADC', 'Support']
-    names = {
-        "Cloud9": ['Berserker', 'Blaber', 'Jojopyun', 'Zven', 'Vulcan'],
-        "Opponent": ['TopLane', 'Jungler', 'MidLane', 'BotLane', 'Support']
-    }
+    roster = team_rosters.get(team, [
+        {'name': f'Player{i}', 'position': pos} 
+        for i, pos in enumerate(['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT'], 1)
+    ])
     
-    current_names = names.get(team, names["Opponent"])
-    
-    for i, role in enumerate(roles):
-        kills = random.randint(1, 8)
-        deaths = random.randint(0, 6)
-        assists = random.randint(2, 12)
+    for i, player_info in enumerate(roster):
+        position = player_info['position']
+        champion_pool = CHAMPIONS.get(position, ['Unknown'])
+        champion = random.choice(champion_pool)
+        
+        kills = random.randint(1, 12)
+        deaths = random.randint(0, 8)
+        assists = random.randint(2, 15)
         kda = (kills + assists) / (deaths + 1)
         
         players.append({
             "id": i + 1,
-            "name": current_names[i],
-            "role": role,
+            "name": player_info['name'],
+            "champion": champion,
+            "position": position,
             "kills": kills,
             "deaths": deaths,
             "assists": assists,
             "kda": round(kda, 2),
-            "cs": random.randint(150, 320),
-            "gold": random.randint(8000, 16000),
+            "cs": random.randint(150, 350),
+            "csPerMin": round(random.uniform(7.5, 10.5), 1),
+            "gold": random.randint(8000, 18000),
+            "goldShare": round(random.uniform(15, 28), 1),
+            "damageShare": round(random.uniform(12, 32), 1),
+            "visionScore": random.randint(15, 65),
             "impact": random.randint(60, 98),
-            "status": "optimal" if kda > 3 else ("warning" if kda > 1.5 else "critical")
+            "status": "optimal" if kda > 3 else ("warning" if kda > 1.5 else "critical"),
+            "dpm": random.randint(400, 800),
+            "killParticipation": round(random.uniform(45, 85), 1)
         })
-        
+    
+    # Game state (matching Valorant structure)
+    team_kills = sum(p["kills"] for p in players)
+    enemy_kills = random.randint(max(5, team_kills - 15), team_kills + 10)
+    gold_diff = random.randint(-5000, 8000)
+    
     return {
-        "team": team,
-        "opponent": opponent,
         "prediction": prediction,
         "players": players,
-        "game_stats": team_stats,
+        "game": {
+            "currentTime": f"{random.randint(20, 40)}:{random.randint(0, 59):02d}",
+            "teamKills": team_kills,
+            "enemyKills": enemy_kills,
+            "teamGold": team_stats["gold_earned"] * 5,
+            "enemyGold": opponent_stats["gold_earned"] * 5,
+            "goldDiff": gold_diff,
+            "mapName": "Summoner's Rift",
+            "teamDragons": team_stats["team_dragonKills"],
+            "enemyDragons": random.randint(0, 4),
+            "teamBarons": team_stats["team_baronKills"],
+            "enemyBarons": random.randint(0, 1),
+            "teamTowers": team_stats["team_towerKills"],
+            "enemyTowers": random.randint(2, 8),
+            "teamInhibitors": team_stats["team_inhibitorKills"],
+            "enemyInhibitors": random.randint(0, 2),
+            "dragonSoul": random.choice([None, "Infernal", "Mountain", "Ocean", "Cloud", "Hextech", "Chemtech"]),
+            "elderDragon": random.choice([True, False]),
+        },
+        "feature_importance": [
+            {"name": "Objective Control", "importance": 22},
+            {"name": "Gold Efficiency", "importance": 18},
+            {"name": "KDA Ratio", "importance": 15},
+            {"name": "Damage Efficiency", "importance": 14},
+            {"name": "Vision Control", "importance": 12},
+            {"name": "Kill Participation", "importance": 10},
+            {"name": "Survival Rate", "importance": 9},
+        ],
+        "team_stats": team_stats,
+        "opponent_stats": opponent_stats,
         "timestamp": asyncio.get_event_loop().time()
     }
 

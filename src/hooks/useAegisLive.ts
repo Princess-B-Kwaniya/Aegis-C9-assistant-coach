@@ -3,17 +3,57 @@ import { PlayerData, GameState, Anomaly } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
+// LoL Game State Interface (matching Valorant structure)
+interface LoLGameData {
+  currentTime: string;
+  teamKills: number;
+  enemyKills: number;
+  teamGold: number;
+  enemyGold: number;
+  goldDiff: number;
+  mapName: string;
+  teamDragons: number;
+  enemyDragons: number;
+  teamBarons: number;
+  enemyBarons: number;
+  teamTowers: number;
+  enemyTowers: number;
+  teamInhibitors: number;
+  enemyInhibitors: number;
+  dragonSoul: string | null;
+  elderDragon: boolean;
+}
+
+interface LoLPrediction {
+  win_probability: number;
+  confidence: number;
+  prediction: string;
+  risk_level: string;
+  model_accuracy: number;
+  roc_auc: number;
+  total_samples: number;
+  model_name: string;
+}
+
+interface FeatureImportance {
+  name: string;
+  importance: number;
+}
+
 export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string = 'Opponent') => {
   const [game, setGame] = useState<GameState>({ winProbability: 50, tempo: 50, anomalies: [] });
   const [telemetry, setTelemetry] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [players, setPlayers] = useState<PlayerData[]>([
-    { id: 1, name: 'Zven', role: 'ADC', stress: 20, impact: 98, status: 'optimal', recentErrors: 0 },
+    { id: 1, name: 'Thanatos', role: 'Top', stress: 20, impact: 98, status: 'optimal', recentErrors: 0 },
     { id: 2, name: 'Blaber', role: 'Jungle', stress: 25, impact: 95, status: 'optimal', recentErrors: 0 },
     { id: 3, name: 'Jojopyun', role: 'Mid', stress: 30, impact: 92, status: 'optimal', recentErrors: 0 },
-    { id: 4, name: 'Berserker', role: 'Top', stress: 22, impact: 96, status: 'optimal', recentErrors: 0 },
+    { id: 4, name: 'Berserker', role: 'Bot', stress: 22, impact: 96, status: 'optimal', recentErrors: 0 },
     { id: 5, name: 'Vulcan', role: 'Support', stress: 28, impact: 94, status: 'optimal', recentErrors: 0 },
   ]);
+  const [lolGameData, setLolGameData] = useState<LoLGameData | null>(null);
+  const [prediction, setPrediction] = useState<LoLPrediction | null>(null);
+  const [featureImportance, setFeatureImportance] = useState<FeatureImportance[]>([]);
 
   const fetchLolPredictions = useCallback(async () => {
     try {
@@ -27,22 +67,48 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
       setIsConnected(true);
       setTelemetry(data);
 
+      // Update prediction
       if (data.prediction) {
+        setPrediction(data.prediction);
         setGame(prev => ({
           ...prev,
           winProbability: data.prediction.win_probability
         }));
       }
 
+      // Update game data
+      if (data.game) {
+        setLolGameData(data.game);
+      }
+
+      // Update feature importance
+      if (data.feature_importance) {
+        setFeatureImportance(data.feature_importance);
+      }
+
+      // Update players
       if (data.players && data.players.length > 0) {
         setPlayers(data.players.map((p: any) => ({
           id: p.id,
           name: p.name,
-          role: p.role,
+          role: p.position || p.role,
+          champion: p.champion,
           stress: Math.floor(Math.random() * 30) + 10,
           impact: p.impact,
           status: p.status,
-          recentErrors: 0
+          recentErrors: 0,
+          kills: p.kills,
+          deaths: p.deaths,
+          assists: p.assists,
+          kda: p.kda,
+          cs: p.cs,
+          csPerMin: p.csPerMin,
+          gold: p.gold,
+          goldShare: p.goldShare,
+          damageShare: p.damageShare,
+          visionScore: p.visionScore,
+          dpm: p.dpm,
+          killParticipation: p.killParticipation,
         })));
       }
     } catch (error) {
@@ -172,5 +238,5 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
     };
   }, []);
 
-  return { game, players, telemetry };
+  return { game, players, telemetry, isConnected, lolGameData, prediction, featureImportance };
 };

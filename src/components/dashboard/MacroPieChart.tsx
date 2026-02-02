@@ -23,7 +23,7 @@ const MacroPieChart: React.FC<MacroPieChartProps> = ({ data }) => {
   const COLORS = ['#00aeef', '#8b5cf6', '#fbbf24'];
 
   return (
-    <div className="w-full h-[200px]">
+    <div className="w-full h-full min-h-[250px]">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie

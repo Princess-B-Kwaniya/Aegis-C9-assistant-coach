@@ -17,7 +17,7 @@ export default function Home() {
   const [isStarted, setIsStarted] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [sessionData, setSessionData] = useState({ teamName: "", opponentName: "", game: "" });
-  const { game, players, telemetry } = useAegisLive(sessionData.teamName, sessionData.opponentName);
+  const { game, players, telemetry, isConnected, lolGameData, prediction, featureImportance } = useAegisLive(sessionData.teamName, sessionData.opponentName);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -139,8 +139,10 @@ export default function Home() {
                 
                 {telemetry?.mie_analysis?.squad_telemetry ? (
                   <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm mb-4">
-                    <p className="text-[9px] font-bold text-slate-400 uppercase mb-3">Vision vs Gold Score</p>
-                    <SquadMetricsChart data={telemetry.mie_analysis.squad_telemetry} type="vision" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Squad Telemetry</p>
+                    <div className="h-[200px]">
+                      <SquadMetricsChart data={telemetry.mie_analysis.squad_telemetry} type="vision" />
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm mb-4 animate-pulse">
@@ -196,11 +198,13 @@ export default function Home() {
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Macro Balance</p>
                         <Zap size={14} className="text-neon-orange" />
                       </div>
-                      {telemetry?.mie_analysis?.probability_metrics ? (
-                        <MacroPieChart data={telemetry.mie_analysis.probability_metrics} />
-                      ) : (
-                        <div className="h-[150px] flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">Awaiting Macro Data...</div>
-                      )}
+                      <div className="h-[250px] w-full">
+                        {telemetry?.mie_analysis?.probability_metrics ? (
+                          <MacroPieChart data={telemetry.mie_analysis.probability_metrics} />
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">Awaiting Macro Data...</div>
+                        )}
+                      </div>
                    </div>
                 </div>
               </div>
@@ -210,49 +214,129 @@ export default function Home() {
                 <div className="bg-card border border-border-custom rounded-3xl p-6 shadow-sm">
                   <div className="flex items-center gap-2 mb-6">
                      <Zap size={16} className="text-neon-orange" />
-                     <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Macro Metrics</h2>
+                     <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                       {lolGameData ? 'Match Overview' : 'Macro Metrics'}
+                     </h2>
                   </div>
                   <div className="space-y-6">
-                    <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Macro Efficiency</p>
-                      <p className="text-3xl font-black text-foreground">{game.tempo}%</p>
-                      <div className="w-full bg-slate-200 h-1.5 mt-4 rounded-full overflow-hidden">
-                        <div className="bg-cloud9-blue h-full transition-all duration-1000 shadow-[0_0_8px_rgba(0,174,239,0.3)]" style={{ width: `${game.tempo}%` }}></div>
-                      </div>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">Tempo Sync</span>
-                        <span className="text-[9px] font-bold text-cloud9-blue uppercase">In Progress</span>
-                      </div>
+                    {/* LoL Game Stats Display */}
+                    {lolGameData ? (
+                      <>
+                        <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Game Time</p>
+                          <p className="text-3xl font-black text-foreground">{lolGameData.currentTime}</p>
+                          <div className="mt-3 flex items-center justify-between text-[10px] font-bold">
+                            <span className="text-cloud9-blue">{sessionData.teamName}: {lolGameData.teamKills}</span>
+                            <span className="text-slate-400">vs</span>
+                            <span className="text-red-500">{sessionData.opponentName}: {lolGameData.enemyKills}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200/50 rounded-2xl">
+                          <p className="text-[10px] font-bold text-yellow-700 uppercase mb-2">Gold Difference</p>
+                          <p className={`text-2xl font-black ${lolGameData.goldDiff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {lolGameData.goldDiff >= 0 ? '+' : ''}{(lolGameData.goldDiff / 1000).toFixed(1)}k
+                          </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl">
+                            <p className="text-[9px] font-bold text-purple-600 uppercase mb-1">Dragons</p>
+                            <p className="text-lg font-black text-purple-600">{lolGameData.teamDragons} - {lolGameData.enemyDragons}</p>
+                          </div>
+                          <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl">
+                            <p className="text-[9px] font-bold text-orange-600 uppercase mb-1">Barons</p>
+                            <p className="text-lg font-black text-orange-600">{lolGameData.teamBarons} - {lolGameData.enemyBarons}</p>
+                          </div>
+                          <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+                            <p className="text-[9px] font-bold text-blue-600 uppercase mb-1">Towers</p>
+                            <p className="text-lg font-black text-blue-600">{lolGameData.teamTowers} - {lolGameData.enemyTowers}</p>
+                          </div>
+                          <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-2xl">
+                            <p className="text-[9px] font-bold text-red-600 uppercase mb-1">Inhibitors</p>
+                            <p className="text-lg font-black text-red-600">{lolGameData.teamInhibitors} - {lolGameData.enemyInhibitors}</p>
+                          </div>
+                        </div>
+
+                        {lolGameData.dragonSoul && (
+                          <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200/50 rounded-2xl">
+                            <p className="text-[9px] font-bold text-indigo-600 uppercase mb-1">Dragon Soul</p>
+                            <p className="text-sm font-black text-indigo-700">{lolGameData.dragonSoul}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Macro Efficiency</p>
+                          <p className="text-3xl font-black text-foreground">{game.tempo}%</p>
+                          <div className="w-full bg-slate-200 h-1.5 mt-4 rounded-full overflow-hidden">
+                            <div className="bg-cloud9-blue h-full transition-all duration-1000 shadow-[0_0_8px_rgba(0,174,239,0.3)]" style={{ width: `${game.tempo}%` }}></div>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">Tempo Sync</span>
+                            <span className="text-[9px] font-bold text-cloud9-blue uppercase">In Progress</span>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-4 bg-cloud9-blue/5 border border-cloud9-blue/10 rounded-2xl">
+                            <p className="text-[9px] font-bold text-cloud9-blue uppercase mb-1">Site Hold</p>
+                            <p className="text-sm font-black text-cloud9-blue uppercase">
+                              {telemetry?.mie_analysis?.probability_metrics?.site_retake_success || '---'}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+                            <p className="text-[9px] font-bold text-blue-500 uppercase mb-1">Obj. Rate</p>
+                            <p className="text-sm font-black text-blue-500 uppercase">
+                              {telemetry?.mie_analysis?.probability_metrics?.baron_contest_rate || '---'}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Clutch Prob</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                              {telemetry?.mie_analysis?.probability_metrics?.clutch_potential || '---'}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Tempo Dev.</p>
+                            <p className="text-sm font-black text-slate-900 uppercase">
+                              {telemetry?.mie_analysis?.probability_metrics?.tempo_deviation || '---'}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Model Info Panel */}
+                {prediction && (
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200/50 rounded-3xl p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ShieldCheck size={16} className="text-emerald-600" />
+                      <h3 className="text-[11px] font-black text-emerald-700 uppercase tracking-[0.2em]">ML Model</h3>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-4 bg-cloud9-blue/5 border border-cloud9-blue/10 rounded-2xl">
-                        <p className="text-[9px] font-bold text-cloud9-blue uppercase mb-1">Site Hold</p>
-                        <p className="text-sm font-black text-cloud9-blue uppercase">
-                          {telemetry?.mie_analysis?.probability_metrics?.site_retake_success || '---'}
-                        </p>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase">Model</span>
+                        <span className="text-[10px] font-black text-emerald-800">{prediction.model_name}</span>
                       </div>
-                      <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
-                        <p className="text-[9px] font-bold text-blue-500 uppercase mb-1">Obj. Rate</p>
-                        <p className="text-sm font-black text-blue-500 uppercase">
-                          {telemetry?.mie_analysis?.probability_metrics?.baron_contest_rate || '---'}
-                        </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase">Accuracy</span>
+                        <span className="text-[10px] font-black text-emerald-800">{prediction.model_accuracy}%</span>
                       </div>
-                      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Clutch Prob</p>
-                        <p className="text-sm font-black text-slate-900 uppercase">
-                          {telemetry?.mie_analysis?.probability_metrics?.clutch_potential || '---'}
-                        </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase">ROC-AUC</span>
+                        <span className="text-[10px] font-black text-emerald-800">{prediction.roc_auc}</span>
                       </div>
-                      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Tempo Dev.</p>
-                        <p className="text-sm font-black text-slate-900 uppercase">
-                          {telemetry?.mie_analysis?.probability_metrics?.tempo_deviation || '---'}
-                        </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-emerald-600 uppercase">Confidence</span>
+                        <span className="text-[10px] font-black text-emerald-800">{prediction.confidence}%</span>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group">
                    <div className="absolute top-0 right-0 w-32 h-32 bg-cloud9-blue/10 blur-3xl -mr-16 -mt-16 group-hover:bg-cloud9-blue/20 transition-all duration-500"></div>
@@ -326,35 +410,84 @@ export default function Home() {
           )}
 
           {activeTab === "analytics" && (
-            <div className="space-y-6">
-               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  <div className="lg:col-span-8 bg-card border border-border-custom rounded-3xl p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-8">
-                       <h2 className="text-lg font-black uppercase italic">Macro Performance Trends</h2>
-                       <BarChart3 className="text-cloud9-blue" size={20} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Model Performance */}
+              <div className="bg-card border border-slate-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <BarChart3 size={16} className="text-cloud9-blue" />
+                  <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Model Performance</h2>
+                </div>
+                {prediction ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                      <p className="text-3xl font-black text-cloud9-blue">{prediction.model_accuracy}%</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Accuracy</p>
                     </div>
-                    <div className="h-[400px]">
-                      <WinProbChart currentProb={game.winProbability} />
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 text-center">
+                      <p className="text-3xl font-black text-cloud9-blue">{prediction.roc_auc}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">ROC-AUC</p>
                     </div>
-                  </div>
-                  <div className="lg:col-span-4 space-y-6">
-                    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
-                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Objective Priority</p>
-                       {telemetry?.mie_analysis?.probability_metrics ? (
-                         <MacroPieChart data={telemetry.mie_analysis.probability_metrics} />
-                       ) : (
-                         <div className="h-[200px] flex items-center justify-center text-slate-300">Awaiting Data...</div>
-                       )}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                      <p className="text-3xl font-black text-slate-700">{prediction.total_samples.toLocaleString()}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Training Samples</p>
                     </div>
-                    <div className="bg-cloud9-blue rounded-3xl p-6 text-white shadow-lg shadow-cloud9-blue/20">
-                       <h3 className="text-sm font-black uppercase mb-2">Efficiency Rating</h3>
-                       <p className="text-4xl font-black mb-4">{game.tempo}%</p>
-                       <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
-                          <div className="bg-white h-full" style={{ width: `${game.tempo}%` }}></div>
-                       </div>
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                      <p className="text-3xl font-black text-slate-700">{featureImportance.length}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">Features Used</p>
                     </div>
                   </div>
-               </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center text-slate-300 font-bold uppercase text-[10px]">
+                    Waiting for model data...
+                  </div>
+                )}
+              </div>
+
+              {/* Feature Importance Chart */}
+              <div className="bg-card border border-slate-100 rounded-3xl p-6 shadow-sm">
+                <div className="flex items-center gap-2 mb-6">
+                  <Zap size={16} className="text-cloud9-blue" />
+                  <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Feature Importance</h2>
+                </div>
+                <div className="space-y-3">
+                  {featureImportance.length > 0 ? (
+                    featureImportance.map((feature, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <span className="text-[10px] font-medium text-slate-600 w-32 truncate">{feature.name}</span>
+                        <div className="flex-1 h-4 bg-slate-100 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-cloud9-blue to-blue-400 rounded-full transition-all duration-500" 
+                            style={{ width: `${feature.importance * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-[10px] font-bold text-cloud9-blue w-10 text-right">{(feature.importance * 100).toFixed(1)}%</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="h-[200px] flex items-center justify-center text-slate-300 font-bold uppercase text-[10px]">
+                      Analyzing predictive factors...
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Win Probability History (Large) */}
+              <div className="bg-card border border-slate-100 rounded-3xl p-8 shadow-sm lg:col-span-2">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="text-cloud9-blue" size={20} />
+                    <h2 className="text-lg font-black uppercase italic">Probability Trends Analysis</h2>
+                  </div>
+                  <div className="px-4 py-2 bg-blue-50 rounded-2xl border border-blue-100">
+                    <span className="text-[10px] font-black text-cloud9-blue uppercase tracking-widest">
+                      Current: {game.winProbability.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="h-[400px]">
+                  <WinProbChart currentProb={game.winProbability} />
+                </div>
+              </div>
             </div>
           )}
 
