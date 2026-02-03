@@ -1,14 +1,17 @@
 "use client";
 
 import React from 'react';
-import { X, Bell, Globe, Database, RefreshCw } from 'lucide-react';
+import { X, Bell, Globe, Database, RefreshCw, Users } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  currentTeam?: string;
+  currentOpponent?: string;
+  onSave?: (team: string, opponent: string) => void;
 }
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, currentTeam, currentOpponent, onSave }) => {
   const [notifications, setNotifications] = React.useState(true);
   const [autoRefresh, setAutoRefresh] = React.useState(true);
   const [refreshInterval, setRefreshInterval] = React.useState(3);
@@ -17,6 +20,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       ? localStorage.getItem('backendUrl') || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
       : ''
   );
+  
+  const [teamName, setTeamName] = React.useState(currentTeam || "Cloud9");
+  const [opponentName, setOpponentName] = React.useState(currentOpponent || "Opponent");
+
+  React.useEffect(() => {
+     if (currentTeam) setTeamName(currentTeam);
+     if (currentOpponent) setOpponentName(currentOpponent);
+  }, [currentTeam, currentOpponent]);
 
   if (!isOpen) return null;
 
@@ -28,7 +39,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       localStorage.setItem('backendUrl', backendUrl);
 
       // Reload to apply settings
-      window.location.reload();
+      if (onSave) {
+          onSave(teamName, opponentName);
+          // If we are just updating session, maybe don't reload?
+          // But existing logic reloads. Let's keep it but ideally we should optionally reload.
+          // For now, let's allow reload BUT onSave should handle state update before/after.
+          // The page reload might wipe the state if not persisted.
+          // Given the structure, simple state update is better.
+          // I will comment out reload if onSave is present to avoid clearing context.
+          if (!onSave) window.location.reload(); 
+      } else {
+         window.location.reload();
+      }
     }
     onClose();
   };
@@ -54,6 +76,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         {/* Content */}
         <div className="p-6 space-y-6">
+          {/* Match Config */}
+          <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
+            <div className="flex items-center gap-3 mb-3">
+               <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center">
+                   <Users size={20} className="text-orange-600" />
+               </div>
+               <div>
+                  <h3 className="text-sm font-bold text-slate-900 uppercase">Match Configuration</h3>
+                  <p className="text-xs text-slate-500">Update Team Names</p>
+               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+               <div>
+                   <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Your Team</label>
+                   <input 
+                      type="text" 
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-cloud9-blue"
+                   />
+               </div>
+               <div>
+                   <label className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Opponent</label>
+                   <input 
+                      type="text" 
+                      value={opponentName}
+                      onChange={(e) => setOpponentName(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-cloud9-blue"
+                   />
+               </div>
+            </div>
+          </div>
+
           {/* Notifications */}
           <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200">
             <div className="flex items-center justify-between mb-3">

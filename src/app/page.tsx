@@ -2,24 +2,81 @@
 
 import React, { useState, useEffect } from "react";
 import { useAegisLive } from "@/hooks/useAegisLive";
-import PlayerCard from "@/components/dashboard/PlayerCard";
+import { PlayerCard } from "@/components/dashboard/PlayerCard";
 import WinProbChart from "@/components/dashboard/WinProbChart";
 import SquadMetricsChart from "@/components/dashboard/SquadMetricsChart";
 import CommsChart from "@/components/dashboard/CommsChart";
 import MacroPieChart from "@/components/dashboard/MacroPieChart";
 import { SquadMetric } from "@/types";
-import TacticalComms from "@/components/dashboard/TacticalComms";
+import { TacticalComms } from "@/components/dashboard/TacticalComms";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { WelcomePage } from "@/components/layout/WelcomePage";
-import { Activity, ShieldCheck, Zap, BarChart3, Users, LayoutDashboard, FileText, Download, Menu, MessageSquare } from "lucide-react";
+import { SettingsModal } from "@/components/modals/SettingsModal";
+import { Activity, ShieldCheck, Zap, BarChart3, Users, LayoutDashboard, FileText, Download, Menu, MessageSquare, Settings } from "lucide-react";
 
 export default function Home() {
   const [isStarted, setIsStarted] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [sessionData, setSessionData] = useState({ teamName: "", opponentName: "", game: "" });
-  const { game, players, telemetry, isConnected, lolGameData, prediction, featureImportance } = useAegisLive(sessionData.teamName, sessionData.opponentName);
+  const { game, players, telemetry, isConnected, lolGameData, prediction, featureImportance } = useAegisLive(sessionData.teamName, sessionData.opponentName, sessionData.game);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Export analysis report as JSON (like Valorant)
+  const exportAnalysisReport = () => {
+    const report = {
+      metadata: {
+        exportDate: new Date().toISOString(),
+        teamName: sessionData.teamName,
+        opponentName: sessionData.opponentName,
+        game: "League of Legends",
+        currentTime: lolGameData?.currentTime || "N/A",
+      },
+      predictions: prediction ? {
+        winProbability: prediction.win_probability,
+        confidence: prediction.confidence,
+        prediction: prediction.prediction,
+        riskLevel: prediction.risk_level,
+        modelAccuracy: prediction.model_accuracy,
+        modelName: prediction.model_name,
+      } : null,
+      gameState: lolGameData ? {
+        currentTime: lolGameData.currentTime,
+        teamKills: lolGameData.teamKills,
+        enemyKills: lolGameData.enemyKills,
+        goldDiff: lolGameData.goldDiff,
+        teamDragons: lolGameData.teamDragons,
+        enemyDragons: lolGameData.enemyDragons,
+        teamBarons: lolGameData.teamBarons,
+        enemyBarons: lolGameData.enemyBarons,
+      } : null,
+      players: players.map(p => ({
+        name: p.name,
+        role: p.role,
+        champion: p.champion,
+        kills: p.kills,
+        deaths: p.deaths,
+        assists: p.assists,
+        kda: p.kda,
+        cs: p.cs,
+        gold: p.gold,
+        visionScore: p.visionScore,
+        status: p.status,
+      })),
+      featureImportance: featureImportance,
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `LoL_Analysis_${sessionData.teamName}_vs_${sessionData.opponentName}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -70,16 +127,30 @@ export default function Home() {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
       />
       
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+        currentTeam={sessionData.teamName}
+        currentOpponent={sessionData.opponentName}
+        onSave={(team, opponent) => setSessionData(prev => ({ ...prev, teamName: team, opponentName: opponent }))}
+      />
+
       <main className="flex-1 p-3 md:p-4 lg:p-6 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-700">
         <div className="max-w-full mx-auto space-y-4 md:space-y-6">
           
           {/* Mobile Menu Button */}
-          <div className="lg:hidden mb-4">
+          <div className="lg:hidden mb-4 flex justify-between items-center">
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
               className="p-3 bg-white border border-slate-200 rounded-2xl shadow-sm"
             >
               <Menu size={20} className="text-slate-600" />
+            </button>
+            <button 
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-3 bg-white border border-slate-200 rounded-2xl shadow-sm"
+            >
+              <Settings size={20} className="text-slate-600" />
             </button>
           </div>
           
@@ -115,13 +186,25 @@ export default function Home() {
               <div className="hidden sm:block w-px h-10 bg-slate-200" />
               <div className="w-full sm:w-auto h-px sm:h-auto bg-slate-200 sm:bg-transparent" />
               <div className="flex flex-row sm:flex-col gap-2 sm:gap-1">
-                 <div className="flex items-center gap-2">
+                 <div className="flex gap-2">
+                   <button 
+                     onClick={() => setIsSettingsOpen(true)}
+                     className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                   >
+                      <Settings size={14} className="text-slate-400" />
+                      <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase">Config</span>
+                   </button>
+                   <button 
+                     onClick={exportAnalysisReport}
+                     className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                   >
+                      <FileText size={14} className="text-slate-400" />
+                      <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase">Export</span>
+                   </button>
+                 </div>
+                 <div className="flex items-center gap-2 px-3 py-1.5">
                     <Activity size={14} className="text-cloud9-blue" />
                     <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase">System Nominal</span>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <ShieldCheck size={14} className="text-cloud9-blue" />
-                    <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase">Aegis Secure</span>
                  </div>
               </div>
             </div>
@@ -132,29 +215,16 @@ export default function Home() {
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
               {/* Left Column: Player Cards */}
               <div className="xl:col-span-3 order-2 xl:order-1 space-y-3 md:space-y-4 xl:max-h-[calc(100vh-250px)] xl:overflow-y-auto xl:pr-2 custom-scrollbar">
-                <div className="flex items-center gap-2 mb-4 px-1">
-                  <Users size={16} className="text-cloud9-blue" />
-                  <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Squad Telemetry</h2>
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <div className="flex items-center gap-2">
+                    <Users size={16} className="text-cloud9-blue" />
+                    <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Squad Status</h2>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-amber-500'} animate-pulse`}></div>
+                    <span className="text-[9px] font-bold text-slate-400">{isConnected ? 'Live' : 'Local'}</span>
+                  </div>
                 </div>
-                
-                {telemetry?.mie_analysis?.squad_telemetry ? (
-                  <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm mb-4">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Squad Telemetry</p>
-                    <div className="h-[200px]">
-                      <SquadMetricsChart data={telemetry.mie_analysis.squad_telemetry} type="vision" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm mb-4 animate-pulse">
-                    <div className="h-3 w-20 bg-slate-100 rounded mb-4"></div>
-                    <div className="h-[200px] bg-slate-50 rounded-xl flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-cloud9-blue/30 border-t-cloud9-blue rounded-full animate-spin"></div>
-                        <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest">Linking Squad...</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3 md:gap-4">
                   {players.map((player, idx) => {

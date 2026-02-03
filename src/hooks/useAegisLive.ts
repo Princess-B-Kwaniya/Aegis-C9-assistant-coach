@@ -40,8 +40,8 @@ interface FeatureImportance {
   importance: number;
 }
 
-export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string = 'Opponent') => {
-  const [game, setGame] = useState<GameState>({ winProbability: 50, tempo: 50, anomalies: [] });
+export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string = 'Opponent', game: string = 'lol') => {
+  const [gameState, setGameState] = useState<GameState>({ winProbability: 50, tempo: 50, anomalies: [] });
   const [telemetry, setTelemetry] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [players, setPlayers] = useState<PlayerData[]>([
@@ -57,8 +57,9 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
 
   const fetchLolPredictions = useCallback(async () => {
     try {
+      const endpoint = game.toLowerCase() === 'valorant' ? 'valorant-predictions' : 'lol-predictions';
       const response = await fetch(
-        `${API_BASE_URL}/lol-predictions?team=${encodeURIComponent(teamName)}&opponent=${encodeURIComponent(opponentName)}`
+        `${API_BASE_URL}/${endpoint}?team=${encodeURIComponent(teamName)}&opponent=${encodeURIComponent(opponentName)}`
       );
       
       if (!response.ok) throw new Error('Backend unavailable');
@@ -70,7 +71,7 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
       // Update prediction
       if (data.prediction) {
         setPrediction(data.prediction);
-        setGame(prev => ({
+        setGameState(prev => ({
           ...prev,
           winProbability: data.prediction.win_probability
         }));
@@ -79,6 +80,14 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
       // Update game data
       if (data.game) {
         setLolGameData(data.game);
+      }
+      
+      // Update anomalies from backend
+      if (data.anomalies && data.anomalies.length > 0) {
+        setGameState(prev => ({
+            ...prev,
+            anomalies: data.anomalies
+        }));
       }
 
       // Update feature importance
@@ -116,12 +125,12 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
       setIsConnected(false);
       
       // Fallback: random win prob
-      setGame(prev => ({
+      setGameState(prev => ({
         ...prev,
         winProbability: Math.min(95, Math.max(5, prev.winProbability + (Math.random() * 4 - 2)))
       }));
     }
-  }, [teamName, opponentName]);
+  }, [teamName, opponentName, game]);
 
   useEffect(() => {
     // Initial fetch
@@ -169,7 +178,7 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
 
               // Update game state with real-time win probability
               if (data.win_prob) {
-                setGame(prev => ({
+                setGameState(prev => ({
                   ...prev,
                   winProbability: data.win_prob
                 }));
@@ -206,7 +215,7 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
                 }));
 
                 if (newAnomalies.length > 0) {
-                    setGame(prev => ({
+                    setGameState(prev => ({
                         ...prev,
                         anomalies: [...prev.anomalies, ...newAnomalies].slice(-10)
                     }));
@@ -238,5 +247,5 @@ export const useAegisLive = (teamName: string = 'Cloud9', opponentName: string =
     };
   }, []);
 
-  return { game, players, telemetry, isConnected, lolGameData, prediction, featureImportance };
+  return { game: gameState, players, telemetry, isConnected, lolGameData, prediction, featureImportance };
 };
